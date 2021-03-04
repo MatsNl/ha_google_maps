@@ -1,56 +1,85 @@
-"""Global fixtures for integration_blueprint integration."""
-# Fixtures allow you to replace functions with a Mock object. You can perform
-# many options via the Mock to reflect a particular behavior from the original
-# function that you want to see without going through the function's actual logic.
-# Fixtures can either be passed into tests as parameters, or if autouse=True, they
-# will automatically be used across all tests.
-#
-# Fixtures that are defined in conftest.py are available across all tests. You can also
-# define fixtures within a particular test file to scope them locally.
-#
-# pytest_homeassistant_custom_component provides some fixtures that are provided by
-# Home Assistant core. You can find those fixture definitions here:
-# https://github.com/MatthewFlamm/pytest-homeassistant-custom-component/blob/master/pytest_homeassistant_custom_component/common.py
-#
-# See here for more info: https://docs.pytest.org/en/latest/fixture.html (note that
-# pytest includes fixtures OOB which you can use as defined on this page)
+"""Fixtures for UniFi methods."""
 from unittest.mock import patch
 
+from locationsharinglib import Person
 import pytest
 
-pytest_plugins = "pytest_homeassistant_custom_component"
+from homeassistant import setup
+from homeassistant.components.google_maps.config_flow import COOKIE, DOMAIN
+from homeassistant.const import CONF_USERNAME
+
+from tests.common import MockConfigEntry
+
+TEST_USERNAME = "test-user@gmail.com"
+TEST_COOKIE = "test-cookie"
+CONFIG = {CONF_USERNAME: TEST_USERNAME, COOKIE: TEST_COOKIE}
+UNIQUE_ID = f"{DOMAIN}-{TEST_USERNAME}"
+SERVICE = "homeassistant.components.google_maps.config_flow.Service"
+
+TEST_LOCATIONS = {
+    1: [
+        None,
+        [None, 1.0, 2.0],
+        1000000000000,
+        0,
+        "Unknown",
+        None,
+        "Internet",
+        3600000,
+    ],
+    2: [
+        None,
+        [None, 1.0, 2.0],
+        100000000000,
+        1000,
+        "Unknown",
+        None,
+        "Internet",
+        3600000,
+    ],
+}
 
 
-# This fixture is used to prevent HomeAssistant from attempting to create and dismiss persistent
-# notifications. These calls would fail without this fixture since the persistent_notification
-# integration is never loaded during a test.
-@pytest.fixture(name="skip_notifications", autouse=True)
-def skip_notifications_fixture():
-    """Skip notification calls."""
-    with patch("homeassistant.components.persistent_notification.async_create"), patch(
-        "homeassistant.components.persistent_notification.async_dismiss"
-    ):
-        yield
+def get_test_person(person=1):
+    """Get a Person object for testing."""
+    return Person(
+        [
+            TEST_USERNAME,
+            TEST_LOCATIONS[person],
+            None,
+            None,
+            None,
+            None,
+            [None, None, TEST_USERNAME, TEST_USERNAME],
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ]
+    )
 
 
-# This fixture, when used, will result in calls to async_get_data to return None. To have the call
-# return a value, we would add the `return_value=<VALUE_TO_RETURN>` parameter to the patch call.
-@pytest.fixture(name="bypass_get_data")
-def bypass_get_data_fixture():
-    """Skip calls to get data from API."""
+async def setup_entry(hass):
+    """Mock and setup a config entry."""
+    entry = MockConfigEntry(domain=DOMAIN, data=CONFIG)
+    entry.add_to_hass(hass)
+
+    assert await setup.async_setup_component(hass, DOMAIN, {})
+    return entry
+
+
+@pytest.fixture(autouse=True, name="mock_service", scope="module")
+def mock_service_fixture():
+    """Mock the azure event hub producer client."""
     with patch(
-        "custom_components.integration_blueprint.IntegrationBlueprintApiClient.async_get_data"
-    ):
-        yield
-
-
-# In this fixture, we are forcing calls to async_get_data to raise an Exception. This is useful
-# for exception handling.
-@pytest.fixture(name="error_on_get_data")
-def error_get_data_fixture():
-    """Simulate error when retrieving data from API."""
-    with patch(
-        "custom_components.integration_blueprint.IntegrationBlueprintApiClient.async_get_data",
-        side_effect=Exception,
-    ):
-        yield
+        f"{SERVICE}.get_all_people", return_value=[get_test_person()]
+    ) as mock_get_all_people, patch(
+        f"{SERVICE}.__init__", return_value=None
+    ) as mock_init:
+        yield (
+            mock_init,
+            mock_get_all_people,
+        )
