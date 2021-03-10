@@ -2,7 +2,7 @@
   "domain": "google_maps",
   "name": "Google Maps",
   "issue_tracker": "https://github.com/MatsNl/ha_google_maps/issues",
-  "version": "0.1"
+  "version": "0.1",
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/google_maps",
   "requirements": [],
