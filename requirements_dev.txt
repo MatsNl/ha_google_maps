@@ -1,2 +1,2 @@
 homeassistant
-locationsharinglib
+locationsharinglib==4.1.5

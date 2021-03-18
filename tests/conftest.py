@@ -5,7 +5,7 @@ from locationsharinglib import Person
 import pytest
 
 from homeassistant import setup
-from homeassistant.components.google_maps.config_flow import COOKIE, DOMAIN
+from custom_components.google_maps.config_flow import COOKIE, DOMAIN
 from homeassistant.const import CONF_USERNAME
 
 from tests.common import MockConfigEntry
